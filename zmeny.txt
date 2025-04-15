@@ -1,0 +1,65 @@
+HybridMLPBlock implementácia
+Implementoval som to paralelne, pretože:
+
+Myslel som si, že paralelné spracovanie môže byť výkonnejšie
+
+Zdalo sa mi to prirodzenejšie - obe MLP vrstvy pracujú nezávisle
+
+V prvom rade som chcel mať funkčnú verziu, ktorú by som neskôr doladil
+
+
+
+
+Počet kanálov
+Zvolil som postupnosť 16-32-64-128, pretože:
+
+Toto je štandardná progresia, ktorú som videl v iných architektúrach
+
+Obával som sa, že pôvodné hodnoty z článku budú príliš náročné na pamäť
+
+Chcel som najskôr otestovať základnú funkčnosť modelu
+
+
+
+
+Stratová funkcia
+Implementoval som len základnú cross-entropy, lebo:
+
+Chcel som začať s najjednoduchšou funkčnou verziou
+
+Kombinovaná strata mi prišla príliš komplexná na prvú implementáciu
+
+Zameral som sa najprv na hlavnú segmentačnú úlohu
+
+
+
+
+Skip connections
+Nepridal som ich presne podľa článku, pretože:
+
+Použil som štandardný U-Net prístup, ktorý dobre poznám
+
+Presná implementácia podľa článku mi prišla menej intuitívna
+
+Chcel som najskôr overiť základnú funkčnosť modelu
+
+
+
+Parametre modelu
+Nedodržal som presné špecifikácie, pretože:
+
+Najskôr som chcel mať základnú funkčnú verziu
+
+Niektoré detaily v tabuľkách mi unikli pri prvej implementácii
+
+Zameral som sa viac na celkovú architektúru ako na presné parametre
+
+
+
+Hlavný dôvod všetkých odchýlok bol, že som sa najskôr chcel zamerať na:
+
+Vytvorenie funkčného základu modelu
+
+Rýchle overenie hlavných myšlienok architektúry
+
+Implementáciu, ktorú by som mohol postupne vylepšovať
