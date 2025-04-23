@@ -5,6 +5,7 @@ import torch.optim as optim
 import cv2
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 class ImBottleneck1D(nn.Module):
     def __init__(self, in_channels, out_channels, dilation_rates=None, reduction=2):
@@ -310,6 +311,10 @@ def train_model(model, image_tensor, mask_tensor, device, num_epochs=100):
     
     target_exist = torch.ones((1, 4), device=device)
     
+    # Initialize lists to store loss values
+    losses = []
+    epochs = []
+    
     for epoch in range(num_epochs):
         optimizer.zero_grad()
         
@@ -320,8 +325,36 @@ def train_model(model, image_tensor, mask_tensor, device, num_epochs=100):
         loss.backward()
         optimizer.step()
         
+        # Store loss values for plotting
+        losses.append(loss.item())
+        epochs.append(epoch + 1)
+        
         if (epoch + 1) % 10 == 0:
             print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+    
+    # Plot the loss curve after training
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, losses, label='Training Loss', color='orange',    # Oranžová farba
+             marker='o',        # Zobrazenie bodov
+             linestyle='-',     # Spájanie bodov čiarou (nie hladká krivka)
+             linewidth=1,       # Šírka čiary
+             markersize=3)
+    plt.title('Training Loss Curve')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    # Save the plot
+    loss_plot_path = 'training_loss.png'
+    plt.savefig(loss_plot_path)
+    print(f"Loss curve saved as '{loss_plot_path}'")
+    
+    # Show the plot (optional - might not work in all environments)
+    try:
+        plt.show()
+    except:
+        pass
 
 def process_image(model, image, image_tensor, device, output_path='output_with_lanes.jpg', target_size=(512, 256)):
     model.eval()
@@ -343,26 +376,57 @@ def process_image(model, image, image_tensor, device, output_path='output_with_l
         lane_overlay[lane_mask_thick == 255] = [0, 255, 0]
         final_image = cv2.addWeighted(image, 0.8, lane_overlay, 0.7, 0)
         
-        #cv2.imwrite(output_path, final_image)
-        #cv2.imshow('Detected Lanes', final_image)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-        #print(f"Image with green lane lines saved as '{output_path}'")
+        cv2.imwrite(output_path, final_image)
+        cv2.imshow('Detected Lanes', final_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        print(f"Image with green lane lines saved as '{output_path}'")
+
+def process_image_with_mask(original_image, mask_path, output_path='output_with_mask.jpg', target_size=(512, 256)):
+    # Načítanie a predspracovanie masky
+    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    if mask is None:
+        raise ValueError(f"Failed to load mask: {mask_path}")
+    
+    mask = cv2.resize(mask, (original_image.shape[1], original_image.shape[0]), interpolation=cv2.INTER_NEAREST)
+    mask_binary = (mask > 128).astype(np.uint8) * 255
+    
+    # Vylepšenie masky
+    kernel = np.ones((3, 3), np.uint8)
+    mask_cleaned = cv2.morphologyEx(mask_binary, cv2.MORPH_OPEN, kernel)
+    mask_thick = cv2.dilate(mask_cleaned, kernel, iterations=1)
+    
+    # Vytvorenie farebnej vrstvy pre masku (červená)
+    mask_overlay = np.zeros_like(original_image)
+    mask_overlay[mask_thick == 255] = [0, 0, 255]  # Červená farba
+    
+    # Kombinovanie pôvodného obrázka s maskou
+    combined_image = cv2.addWeighted(original_image, 0.7, mask_overlay, 0.3, 0)
+    
+    # Uloženie a zobrazenie výsledku
+    cv2.imwrite(output_path, combined_image)
+    cv2.imshow('Image with Mask Overlay', combined_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    print(f"Image with mask overlay saved as '{output_path}'")
 
 if __name__ == "__main__":
     model = LaneDetectionNetwork(num_classes=2, num_lanes=4)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     
-    image_path = './10.jpg'
-    mask_path = './20.png'
+    image_path = './0.jpg'
+    mask_path = './masks/binary_seg.png'
     
     target_size = (512, 256)
     original_image, image_tensor = preprocess_image(image_path, target_size)
     mask_tensor = preprocess_mask(mask_path, target_size)
     
     print("Starting training...")
-    train_model(model, image_tensor, mask_tensor, device, num_epochs=500)
+    train_model(model, image_tensor, mask_tensor, device, num_epochs=300)
     
     print("Processing image...")
     process_image(model, original_image, image_tensor, device, target_size=target_size)
+
+    print("Showing mask overlay...")
+    process_image_with_mask(original_image, mask_path)
